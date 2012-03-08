@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, NoMonomorphismRestriction, TemplateHaskell #-}
+{-# LANGUAGE TupleSections, NoMonomorphismRestriction, StandaloneDeriving, TemplateHaskell #-}
 module Main where
 import Language.Haskell.TH
 import Language.Haskell.TH.Universe
@@ -31,6 +31,9 @@ tests = [
             ],
             testGroup "collect_new_dec_names" [
                 testCase "test_collect_new_dec_names_0" test_collect_new_dec_names_0
+            ],
+            testGroup "sub_universe" [
+                testCase "test_sub_universe_0" test_sub_universe_0
             ]]
             
 test_get_type_names_0    = actual @?= [] where
@@ -61,6 +64,44 @@ test_collect_new_dec_names_0 = do
     actual <- eval_state (collect_new_dec_names initial)
     actual @?= Right expected
 
+deriving instance Ord Dec
+deriving instance Ord Clause
+deriving instance Ord Pat
+deriving instance Ord Body
+deriving instance Ord FunDep
+deriving instance Ord Foreign
+deriving instance Ord Pragma
+deriving instance Ord FamFlavour
+deriving instance Ord TyVarBndr
+deriving instance Ord Kind
+deriving instance Ord Pred
+deriving instance Ord Con
+deriving instance Ord Strict
+deriving instance Ord Safety
+deriving instance Ord Callconv
+deriving instance Ord Guard
+deriving instance Ord Lit
+deriving instance Ord Exp
+deriving instance Ord InlineSpec
+deriving instance Ord Match 
+deriving instance Ord Range
+deriving instance Ord Stmt
+
+test_sub_universe_0 = do
+    let expected          = sort [initial_type, dec_0, dec_1]  
+        initial_universe  = [initial_type, dec_0, dec_1, dec_2]
+        initial_type      = DataD [] initial_type_name [] [NormalC (mkName "C") 
+                                $ map (NotStrict, ) [ConT $ mkName "dec_0", ConT $ mkName "dec_1"]] []
+        initial_type_name = mkName "Test_name"
+        dec_0             = DataD [] (mkName "dec_0") [] [NormalC (mkName "D") 
+                                [(NotStrict, ConT $ mkName "dec_1")]] []
+        dec_1             = DataD [] (mkName "dec_1") [] [NormalC (mkName "E") 
+                                []] []
+        dec_2             = DataD [] (mkName "dec_2") [] [NormalC (mkName "F") 
+                                []] []
+    let actual            = sub_universe initial_universe initial_type_name
+    (sort $ map snd actual) @?= expected 
+
 data OtherThing = OtherThing Float
 
 data ThingType = ThingType OtherThing Int
@@ -69,7 +110,8 @@ $(do
      u <- get_universe ''ThingType
      runIO $ do (putStr . show) u
      return [])
-
+     
+     
 
 
 
